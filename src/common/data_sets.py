@@ -47,7 +47,7 @@ def load_data_fashion_mnist(batch_size=256):
     """
     mnist_train = gdata.vision.FashionMNIST(train=True)
     mnist_test = gdata.vision.FashionMNIST(train=False)
-    transformer = gdata.vision.transformer.ToTensor()
+    transformer = gdata.vision.transforms.ToTensor()
     if sys.platform.startswith("win"):
         num_workers = 0
     else:
@@ -68,3 +68,13 @@ def get_fashion_mnist_labels(labels):
     text_labels = ["t-shirt", "trouser", "pullover", "dress", "cost",
                    "sandal", "shirt", "sneaker", "bag", "ankle_boot"]
     return [text_labels[int(i)] for i in labels]
+
+
+if __name__ == '__main__':
+    import time
+    train_iter, test_iter = load_data_fashion_mnist()
+    start = time.time()
+    for x, y in train_iter:
+        continue
+
+    print("%.2f" % (time.time() - start))

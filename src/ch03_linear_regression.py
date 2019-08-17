@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-File: linear_regression.py
+File: ch03_linear_regression.py
 Date: 2019/8/6 11:05 AM
 """
 from mxnet import gluon, nd, init
@@ -24,7 +24,8 @@ class LinRegScratch(BaseRegression):
         super(LinRegScratch, self).__init__(**kwargs)
         self.w = None
         self.b = None
-        self.loss = square_loss
+        if not self.loss:
+            self.loss = square_loss
 
     def fit(self, train_x, train_y, lr=0.3, batch_size=64, epochs=3,
             test_x=None, test_y=None):
@@ -40,7 +41,7 @@ class LinRegScratch(BaseRegression):
 
         for epoch in range(epochs):
             for x, y in data_sets.iter_data(train_x, train_y, batch_size):
-                self.train(x, y, lr, batch_size)
+                self._train(x, y, lr, batch_size)
             train_loss = self.evaluate(train_x, train_y)
             if test_x and test_y:
                 test_loss = self.evaluate(test_x, test_y)
@@ -67,8 +68,8 @@ class LinRegGluon(BaseRegression):
     def __init__(self):
         super(LinRegGluon, self).__init__()
         self.net = None
-        self.trainer = None
-        self.loss = g_loss.L2Loss()
+        if not self.loss:
+            self.loss = g_loss.L2Loss()
 
     def fit(self, train_x, train_y, lr=0.03, batch_size=64, epochs=10,
             test_x=None, test_y=None):
@@ -87,7 +88,7 @@ class LinRegGluon(BaseRegression):
         self.trainer = gluon.Trainer(self.net.collect_params(), 'sgd', {"learning_rate": lr})
         for epoch in range(epochs):
             for x, y in data_iter:
-                self.train(x, y, lr, batch_size)
+                self._train(x, y, lr, batch_size)
 
             train_loss = self.evaluate(train_x, train_y)
             if test_x and test_y:
@@ -110,13 +111,17 @@ class LinRegGluon(BaseRegression):
 
 
 if __name__ == '__main__':
-    use_gluon = True
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument("--use_gluon", default="1")
+    args = parser.parse_args()
     # load data
     true_w = [2, -3.4, 4]
     true_b = 4.2
     _x, _y = data_sets.load_data_linear_regression(true_w, true_b)
     # model
-    if use_gluon:
+    if args.use_gluon == "1":
         model = LinRegGluon()
     else:
         model = LinRegScratch()
