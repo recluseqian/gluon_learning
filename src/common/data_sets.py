@@ -25,7 +25,7 @@ def iter_data(x, y, batch_size):
         yield x.take(batch_indices), y.take(batch_indices)
 
 
-def load_data_linear_regression(true_w, true_b, num_examples=1000):
+def load_data_linear_regression(true_w, true_b, num_train=1000, num_test=0):
     """
     """
     assert isinstance(true_w, list)
@@ -35,7 +35,7 @@ def load_data_linear_regression(true_w, true_b, num_examples=1000):
     true_w = nd.array(true_w)
     true_b = nd.array([true_b, ])
 
-    x = nd.random.normal(scale=1, shape=(num_examples,
+    x = nd.random.normal(scale=1, shape=(num_train + num_test,
                                          num_features))
     y = nd.dot(x, true_w) + true_b
     y += nd.random.normal(scale=0.01, shape=y.shape)
@@ -70,11 +70,28 @@ def get_fashion_mnist_labels(labels):
     return [text_labels[int(i)] for i in labels]
 
 
-if __name__ == '__main__':
-    import time
-    train_iter, test_iter = load_data_fashion_mnist()
-    start = time.time()
-    for x, y in train_iter:
-        continue
+def load_data_polynomial(true_w, true_b, num_train=5000, num_test=1000):
+    """
+    """
+    features = nd.normal(shape=(num_train + num_test, 1))
+    poly_features = [nd.power(features, i) for i in range(1, len(true_w) + 1)]
+    poly_features = nd.concat(*poly_features)
+    true_w = nd.array(true_w)
+    labels = nd.dot(poly_features, true_w) + true_b
+    labels += nd.random.normal(scale=0.1)
+    return features, poly_features, labels
 
-    print("%.2f" % (time.time() - start))
+
+if __name__ == '__main__':
+    # test fashion minist
+    # import time
+    # _train_iter, _test_iter = load_data_fashion_mnist()
+    # start = time.time()
+    # for x, y in _train_iter:
+    #     continue
+
+    # print("%.2f" % (time.time() - start))
+    x, y = load_data_polynomial([1, 2], 1, num_train=1, num_test=1)
+    print(x)
+    print(y)
+

@@ -3,7 +3,7 @@
 
 from mxnet import autograd
 from common.functions import sgd
-import log_utils
+from . import log_utils
 
 
 logger = log_utils.get_logger(__name__)

@@ -8,7 +8,8 @@ import sys
 import logging
 
 
-def get_logger(name, with_debug_info=False, console_handler=True, console_level=logging.DEBUG,
+def get_logger(name, with_debug_info=False,
+               console_handler=True, console_level=logging.DEBUG, console_stream=sys.stdout,
                file_name=None, file_level=logging.DEBUG):
 
     _logger = logging.getLogger(name=name)
@@ -21,7 +22,7 @@ def get_logger(name, with_debug_info=False, console_handler=True, console_level=
         formatter = logging.Formatter("%(message)s")
 
     if console_handler:
-        ch = logging.StreamHandler(stream=sys.stderr)
+        ch = logging.StreamHandler(stream=console_stream)
         ch.setLevel(console_level)
         ch.setFormatter(formatter)
         _logger.addHandler(ch)
