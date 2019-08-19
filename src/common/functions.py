@@ -40,6 +40,12 @@ def cross_entropy(y_hat, y):
     return -nd.pick(y_hat, y).log()
 
 
+# ############ regularization ##################
+def l2_penalty(w):
+    """ l2 regularization """
+    return (w ** 2).sum() / 2
+
+
 # ############ learning algorithm ##################
 def sgd(params, lr, batch_size):
     """

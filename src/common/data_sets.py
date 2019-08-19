@@ -76,7 +76,6 @@ def load_data_polynomial(true_w, true_b, num_train=5000, num_test=1000):
     features = nd.normal(shape=(num_train + num_test, 1))
     poly_features = [nd.power(features, i) for i in range(1, len(true_w) + 1)]
     poly_features = nd.concat(*poly_features)
-    true_w = nd.array(true_w)
     labels = nd.dot(poly_features, true_w) + true_b
     labels += nd.random.normal(scale=0.1)
     return features, poly_features, labels

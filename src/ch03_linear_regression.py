@@ -85,7 +85,7 @@ class LinRegGluon(BaseRegression):
         self.net.initialize(init.Normal(sigma=0.01))
 
         # training
-        self.trainer = gluon.Trainer(self.net.collect_params(), 'sgd', {"learning_rate": lr})
+        self.trainers.append(gluon.Trainer(self.net.collect_params(), 'sgd', {"learning_rate": lr}))
         for epoch in range(epochs):
             for x, y in data_iter:
                 self._train(x, y, lr, batch_size)

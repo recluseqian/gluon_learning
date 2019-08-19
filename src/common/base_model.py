@@ -14,7 +14,7 @@ class BaseRegression:
     """
     def __init__(self, **kwargs):
         self.params = []
-        self.trainer = None
+        self.trainers = []
         self.loss = kwargs.get('loss')
 
     def fit(self, train_x, train_y, lr, batch_size, epochs, test_x, test_y):
@@ -39,12 +39,16 @@ class BaseRegression:
         """
         with autograd.record():
             y_hat = self.forward(x)
-            batch_loss = self.loss(y_hat, y)
+            batch_loss = self._loss(y_hat, y)
         batch_loss.backward()
-        if self.trainer:
-            self.trainer.step(batch_size)
+        if self.trainers:
+            [trainer.step(batch_size) for trainer in self.trainers]
         else:
             sgd(self.params, lr, batch_size)
+
+    def _loss(self, y_hat, y):
+        """ loss function """
+        return self.loss(y_hat, y)
 
 
 class BaseClassifier:
@@ -52,7 +56,7 @@ class BaseClassifier:
     """
     def __init__(self, **kwargs):
         self.params = []
-        self.trainer = None
+        self.trainers = []
         self.loss = None
 
     def fit(self, train_iter, lr, batch_size, epochs, test_iter):
@@ -83,11 +87,11 @@ class BaseClassifier:
             for x, y in train_iter:
                 with autograd.record():
                     y_hat = self.forward(x)
-                    batch_loss = self.loss(y_hat, y).sum()
+                    batch_loss = self._loss(y_hat, y).sum()
                 batch_loss.backward()
 
-                if self.trainer:
-                    self.trainer.step(batch_size)
+                if self.trainers:
+                    [trainer.step(batch_size) for trainer in self.trainers]
                 else:
                     sgd(self.params, lr, batch_size)
 
@@ -103,6 +107,10 @@ class BaseClassifier:
                 test_acc = self.evaluate_accuracy(test_iter)
                 logger.info("epoch %d, loss: %.4f, train acc %.4f, test acc: %.4f"
                             % (epoch + 1, train_loss, train_acc, test_acc))
+
+    def _loss(self, y_hat, y):
+        """ loss function """
+        return self.loss(y_hat, y)
 
 
 if __name__ == '__main__':
