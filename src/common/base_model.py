@@ -64,7 +64,7 @@ class BaseClassifier:
         """
         raise NotImplementedError
 
-    def forward(self, x):
+    def forward(self, *args):
         raise NotImplementedError
 
     def evaluate_accuracy(self, data_iter):

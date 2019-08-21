@@ -70,7 +70,7 @@ class MLPGluon(BaseClassifier):
         self.net.add(nn.Dense(10))
         self.net.initialize(init.Normal(sigma=0.01))
 
-        self.trainer = gluon.Trainer(self.net.collect_params(), "sgd", {"learning_rate": lr})
+        self.trainers.append(gluon.Trainer(self.net.collect_params(), "sgd", {"learning_rate": lr}))
 
         self._train(train_iter, lr, batch_size, epochs, test_iter=test_iter)
 

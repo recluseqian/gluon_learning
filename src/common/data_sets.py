@@ -5,6 +5,7 @@ File: data_sets.py
 Date: 2019/8/16 8:45 PM
 """
 import sys
+import zipfile
 from mxnet import nd
 from mxnet.gluon import data as gdata
 import random
@@ -81,6 +82,59 @@ def load_data_polynomial(true_w, true_b, num_train=5000, num_test=1000):
     return features, poly_features, labels
 
 
+def load_jaychou_lyrics():
+    """ """
+    with zipfile.ZipFile("../../data/jaychou_lyrics.txt.zip") as zin:
+        with zin.open("jaychou_lyrics.txt") as f:
+            corpus_chars = f.read().decode("utf8")
+    corpus_chars = corpus_chars.replace("\n", " ").replace("\r", " ")
+    # logger.info(corpus_chars[:40])
+    corpus_chars = corpus_chars[:10000]
+    idx_to_char = list(set(corpus_chars))
+    char_to_idx = dict([(char, i) for i, char in enumerate(idx_to_char)])
+    vocab_size = len(char_to_idx)
+    corpus_indices = [char_to_idx[char] for char in corpus_chars]
+    return corpus_indices, char_to_idx, idx_to_char, vocab_size
+
+
+def data_iter_random(corpus_indices, batch_size, num_steps, ctx=None):
+    """ random sample sequence """
+    num_examples = (len(corpus_indices) - 1) // num_steps
+    epoch_size = num_examples // batch_size
+    example_indices = list(range(num_examples))
+    random.shuffle(example_indices)
+
+    def _data(pos):
+        return corpus_indices[pos: pos + num_steps]
+
+    for i in range(epoch_size):
+        i = i * batch_size
+        batch_indices = example_indices[i: i + batch_size]
+        x = [_data(j * num_steps) for j in batch_indices]
+        y = [_data(j * num_steps + 1) for j in batch_indices]
+        yield nd.array(x, ctx), nd.array(y, ctx)
+
+
+def data_iter_consecutive(corpus_indices, batch_size, num_steps, ctx=None):
+    """ consecutive sample sequence """
+    corpus_indices = nd.array(corpus_indices, ctx=ctx)
+    data_len = len(corpus_indices)
+    batch_len = data_len // batch_size
+    indices = corpus_indices[:batch_size*batch_len].reshape((batch_size, batch_len))
+
+    epoch_size = (batch_len - 1) // num_steps
+    for i in range(epoch_size):
+        i = i * num_steps
+        x = indices[:, i: i + num_steps]
+        y = indices[:, i + 1: i + num_steps + 1]
+        yield x, y
+
+
+def to_onehot(X, voc_size):
+    """ (batch_size, num_step) -> (num_step, (batch_size, voc_size)"""
+    return [nd.one_hot(x, voc_size) for x in X.T]
+
+
 if __name__ == '__main__':
     # test fashion minist
     # import time
@@ -90,7 +144,16 @@ if __name__ == '__main__':
     #     continue
 
     # print("%.2f" % (time.time() - start))
-    x, y = load_data_polynomial([1, 2], 1, num_train=1, num_test=1)
-    print(x)
-    print(y)
+    # load_jaychou_lyrics()
+    my_seq = list(range(30))
+    for X, Y in data_iter_random(my_seq, batch_size=2, num_steps=6):
+        logger.info("X: {}\nY: {}".format(X, Y))
+    my_seq = list(range(30))
+    for X, Y in data_iter_consecutive(my_seq, batch_size=2, num_steps=6):
+        logger.info("X: {}\nY: {}".format(X, Y))
+
+    X = nd.arange(10).reshape((2, 5))
+    X = to_onehot(X, 1027)
+    logger.info("{}, {}".format(len(X), X[0].shape))
+
 

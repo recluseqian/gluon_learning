@@ -59,8 +59,7 @@ class SoftMaxGluon(BaseClassifier):
         self.net.initialize(init.Normal(sigma=0.01))
 
         # trainer
-        self.trainer = gluon.Trainer(self.net.collect_params(), "sgd", {"learning_rate": lr})
-
+        self.trainers.append(gluon.Trainer(self.net.collect_params(), "sgd", {"learning_rate": lr}))
         self._train(train_iter, lr, batch_size, epochs, test_iter=test_iter)
 
     def forward(self, x):
@@ -84,4 +83,3 @@ if __name__ == '__main__':
     else:
         model = SoftMaxScratch(num_inputs=784, num_outputs=10)
     model.fit(_train_iter, test_iter=_test_iter)
-
