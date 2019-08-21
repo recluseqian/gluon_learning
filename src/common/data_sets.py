@@ -82,9 +82,9 @@ def load_data_polynomial(true_w, true_b, num_train=5000, num_test=1000):
     return features, poly_features, labels
 
 
-def load_jaychou_lyrics():
+def load_jaychou_lyrics(zip_file):
     """ """
-    with zipfile.ZipFile("../../data/jaychou_lyrics.txt.zip") as zin:
+    with zipfile.ZipFile(zip_file) as zin:
         with zin.open("jaychou_lyrics.txt") as f:
             corpus_chars = f.read().decode("utf8")
     corpus_chars = corpus_chars.replace("\n", " ").replace("\r", " ")

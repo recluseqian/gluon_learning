@@ -46,12 +46,26 @@ def l2_penalty(w):
     return (w ** 2).sum() / 2
 
 
-# ############ learning algorithm ##################
+# ############ optimization algorithm ##################
 def sgd(params, lr, batch_size):
     """
     """
     for param in params:
         param -= lr / batch_size * param.grad
+
+
+# ############ others #####################
+def grad_clipping(params, theta, ctx):
+    if theta is None:
+        return
+
+    norm = nd.array([0], ctx=ctx)
+    for param in params:
+        norm += (param.grad ** 2).sum()
+    norm = norm.sqrt().asscalar()
+    if norm > theta:
+        for param in params:
+            param.grad[:] *= theta / norm
 
 
 if __name__ == '__main__':
