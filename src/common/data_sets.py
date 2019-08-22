@@ -88,13 +88,12 @@ def load_jaychou_lyrics(zip_file):
         with zin.open("jaychou_lyrics.txt") as f:
             corpus_chars = f.read().decode("utf8")
     corpus_chars = corpus_chars.replace("\n", " ").replace("\r", " ")
-    # logger.info(corpus_chars[:40])
     corpus_chars = corpus_chars[:10000]
     idx_to_char = list(set(corpus_chars))
     char_to_idx = dict([(char, i) for i, char in enumerate(idx_to_char)])
     vocab_size = len(char_to_idx)
     corpus_indices = [char_to_idx[char] for char in corpus_chars]
-    return corpus_indices, char_to_idx, idx_to_char, vocab_size
+    return corpus_indices, idx_to_char, char_to_idx, vocab_size
 
 
 def data_iter_random(corpus_indices, batch_size, num_steps, ctx=None):
@@ -130,9 +129,9 @@ def data_iter_consecutive(corpus_indices, batch_size, num_steps, ctx=None):
         yield x, y
 
 
-def to_onehot(X, voc_size):
+def to_onehot(inputs, voc_size):
     """ (batch_size, num_step) -> (num_step, (batch_size, voc_size)"""
-    return [nd.one_hot(x, voc_size) for x in X.T]
+    return [nd.one_hot(x, voc_size) for x in inputs.T]
 
 
 if __name__ == '__main__':
