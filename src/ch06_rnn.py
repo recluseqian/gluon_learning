@@ -7,7 +7,8 @@ Date: 2019/8/21 2:51 PM
 import math
 from mxnet import nd, autograd
 from mxnet.gluon import nn, loss as gloss
-from common import data_sets, log_utils, utils
+from common import data_sets, log_utils
+from common.functions import try_gpu
 from common.base_model import BaseRNN
 
 
@@ -47,7 +48,7 @@ def test_forward():
     _corpus_indices, _idx_to_char, _char_to_idx, _vocab_size = \
         data_sets.load_jaychou_lyrics("../data/jaychou_lyrics.txt.zip")
 
-    context = utils.try_gpu()
+    context = try_gpu()
     _num_hidden = 256
     _x = nd.arange(10).reshape((2, 5))
     _inputs = data_sets.to_onehot(_x.as_in_context(context), _vocab_size)
@@ -61,7 +62,7 @@ def test_predict():
     _corpus_indices, _idx_to_char, _char_to_idx, _vocab_size = \
         data_sets.load_jaychou_lyrics("../data/jaychou_lyrics.txt.zip")
 
-    context = utils.try_gpu()
+    context = try_gpu()
     _num_hidden = 256
     model = RNNScratch(_vocab_size, _idx_to_char, _char_to_idx, _num_hidden, context)
     result = model.predict_rnn("分开", 10)
@@ -74,7 +75,7 @@ def test_train(args):
 
     is_random_iter = args.is_random_iter == "1"
 
-    context = utils.try_gpu()
+    context = try_gpu()
     _num_hidden = 256
     model = RNNScratch(_vocab_size, _idx_to_char, _char_to_idx, _num_hidden, context, is_random_iter=is_random_iter)
     model.fit(_corpus_indices, lr=1e2, batch_size=32, epochs=250, num_steps=35)

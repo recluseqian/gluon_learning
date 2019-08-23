@@ -84,7 +84,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument("--use_gluon", default="1")
+    parser.add_argument("--use_gluon", default="0")
     args = parser.parse_args()
 
     _train_iter, _test_iter = load_data_fashion_mnist(batch_size=256)

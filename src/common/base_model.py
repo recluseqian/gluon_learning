@@ -88,6 +88,8 @@ class BaseClassifier:
             for x, y in train_iter:
                 with autograd.record():
                     y_hat = self.forward(x)
+                    print(y_hat.shape)
+                    print(y.shape)
                     batch_loss = self._loss(y_hat, y).sum()
                 batch_loss.backward()
 

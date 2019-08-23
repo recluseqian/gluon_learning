@@ -4,6 +4,7 @@
 File: functions.py
 Date: 2019/8/16 8:44 PM
 """
+import mxnet as mx
 from mxnet import nd
 from common import log_utils
 
@@ -66,6 +67,16 @@ def grad_clipping(params, theta, ctx):
     if norm > theta:
         for param in params:
             param.grad[:] *= theta / norm
+
+
+def try_gpu():
+    """ If gpu is available return gpu context, else return cpu context"""
+    try:
+        ctx = mx.gpu()
+        _ = nd.array([0], ctx=ctx)
+    except mx.base.MXNetError:
+        ctx = mx.cpu()
+    return ctx
 
 
 if __name__ == '__main__':
