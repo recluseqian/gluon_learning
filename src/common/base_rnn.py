@@ -5,6 +5,7 @@ File: base_rnn.py
 Date: 2019/8/22 8:24 PM
 """
 import time
+import math
 import mxnet as mx
 from mxnet import nd, gluon, autograd
 from mxnet.gluon import nn
@@ -26,12 +27,24 @@ class BaseRNN(nn.Block):
         self.idx_to_char = idx_to_char
         self.char_to_idx = char_to_idx
         self.num_hidden = num_hidden
-        self.ctx = kwargs.get("ctx", try_gpu())
+        self.ctx = try_gpu()
         self.init_scale = kwargs.get("init_scale", 0.01)
 
         self.trainer = None
         self.parameters = None
         self.loss = None
+
+    def begin_state(self, batch_size):
+        """ begin init state """
+        raise NotImplementedError
+
+    def fit(self, corpus_indices, num_steps, hyper_params, epochs, **kwargs):
+        """fit function"""
+        raise NotImplementedError
+
+    def forward(self, inputs, state):
+        """ forward function """
+        raise NotImplementedError
 
     def _train(self, corpus_indices, num_steps, hyper_params, epochs, is_random_iter):
         """ train function """
@@ -44,6 +57,7 @@ class BaseRNN(nn.Block):
         clipping_theta = hyper_params.get("clipping_theta", 1e-2)
         lr = hyper_params.get("lr", 1e2)
 
+        history_loss = []
         for epoch in range(epochs):
             total_loss, total_num, start = 0.0, 0, time.time()
 
@@ -60,13 +74,16 @@ class BaseRNN(nn.Block):
                         s.detach()
 
                 with autograd.record():
-                    inputs = to_onehot(x, self.vocab_size)
+                    inputs = nd.one_hot(x.T, self.vocab_size)
                     y_hat, state = self.forward(inputs, state)
                     y = y.T.reshape((-1,))
                     batch_loss = self.loss(y_hat, y).mean()
                 batch_loss.backward()
 
+                if not self.parameters or len(self.parameters) <= 0:
+                    self.parameters = [p.data() for p in self.collect_params().values()]
                 grad_clipping(self.parameters, clipping_theta, self.ctx)
+
                 if self.trainer:
                     self.trainer.step(1)
                 else:
@@ -75,13 +92,13 @@ class BaseRNN(nn.Block):
                 total_num += y.size
                 total_loss += batch_loss.asscalar() * y.size
 
-    def begin_state(self, *args, **kwargs):
-        """ begin init state """
-        raise NotImplementedError
-
-    def forward(self, *args):
-        """ forward function """
-        raise NotImplementedError
+            history_loss.append(total_loss/total_num)
+            if epoch + 1 % 50 == 0:
+                print("epoch {}, perplexity {}, time {} sec"
+                      .format(epoch + 1, math.exp(total_loss / total_num), time.time() - start))
+                print(self.predict_rnn("分开", 50))
+                print(self.predict_rnn("不分开", 50))
+        return history_loss
 
     def predict_rnn(self, prefix, num_chars):
         """ predict sequence """
@@ -89,9 +106,12 @@ class BaseRNN(nn.Block):
         output = [self.char_to_idx[prefix[0]]]
 
         for t in range(num_chars + len(prefix) - 1):
-            inputs = to_onehot(nd.array([output[-1]], ctx=self.ctx).reshape((1, -1)), self.vocab_size)
+            inputs = nd.one_hot(nd.array([output[-1]], ctx=self.ctx).reshape((-1, 1)), self.vocab_size)
             y_hat, state = self.forward(inputs, state)
-            output.append(y_hat.argmax(axix=0).asscalar())
+            if t < len(prefix) - 1:
+                output.append(self.char_to_idx[prefix[t + 1]])
+            else:
+                output.append(int(y_hat[0].argmax(axis=0).asscalar()))
         return "".join(self.idx_to_char[i] for i in output)
 
 
