@@ -6,11 +6,10 @@ Date: 2019/8/22 8:24 PM
 """
 import time
 import math
-import mxnet as mx
-from mxnet import nd, gluon, autograd
-from mxnet.gluon import nn
+from mxnet import nd, autograd, gluon, init
+from mxnet.gluon import nn, loss as gloss
 from functions import try_gpu, grad_clipping, sgd
-from common.data_sets import data_iter_consecutive, data_iter_random, to_onehot
+from common.data_sets import data_iter_consecutive, data_iter_random
 import log_utils
 
 
@@ -32,7 +31,7 @@ class BaseRNN(nn.Block):
 
         self.trainer = None
         self.parameters = None
-        self.loss = None
+        self.loss = gloss.SoftmaxCrossEntropyLoss()
 
     def begin_state(self, batch_size):
         """ begin init state """
@@ -93,7 +92,7 @@ class BaseRNN(nn.Block):
                 total_loss += batch_loss.asscalar() * y.size
 
             history_loss.append(total_loss/total_num)
-            if epoch + 1 % 50 == 0:
+            if (epoch + 1) % 50 == 0:
                 print("epoch {}, perplexity {}, time {} sec"
                       .format(epoch + 1, math.exp(total_loss / total_num), time.time() - start))
                 print(self.predict_rnn("分开", 50))
@@ -113,6 +112,58 @@ class BaseRNN(nn.Block):
             else:
                 output.append(int(y_hat[0].argmax(axis=0).asscalar()))
         return "".join(self.idx_to_char[i] for i in output)
+
+
+class BaseRNNScratch(BaseRNN):
+    """
+    """
+    def __init__(self, vocab_size, idx_to_char, char_to_idx, num_hidden, **kwargs):
+        super(BaseRNNScratch, self).__init__(vocab_size, idx_to_char, char_to_idx, num_hidden, **kwargs)
+
+    def begin_state(self, batch_size):
+        raise NotImplementedError
+
+    def fit(self, corpus_indices, num_steps, hyper_params, epochs, **kwargs):
+        raise NotImplementedError
+
+    def forward(self, inputs, state):
+        raise NotImplementedError
+
+    def _one_params(self, shape):
+        return nd.random.normal(shape=shape, scale=self.init_scale, ctx=self.ctx)
+
+    def _three_params(self):
+        return (self._one_params(shape=(self.vocab_size, self.num_hidden)),
+                self._one_params(shape=(self.num_hidden, self.num_hidden)),
+                nd.zeros(self.num_hidden, ctx=self.ctx))
+
+
+class BaseRNNGluon(BaseRNN):
+    """
+    """
+    def __init__(self, vocab_size, idx_to_char, char_to_idx, num_hidden, rnn_layer, **kwargs):
+        super(BaseRNNGluon, self).__init__(vocab_size, idx_to_char, char_to_idx, num_hidden, **kwargs)
+        # model params
+        self.rnn_layer = rnn_layer
+        self.dense = nn.Dense(self.vocab_size)
+
+    def begin_state(self, batch_size):
+        """init first state"""
+        return self.rnn_layer.begin_state(batch_size=batch_size, ctx=self.ctx)
+
+    def fit(self, corpus_indices, num_steps, hyper_params, epochs, **kwargs):
+        """ fit function """
+        lr = hyper_params.get("lr", 1e2)
+        self.initialize(ctx=self.ctx, force_reinit=True, init=init.Normal(sigma=0.01))
+        self.trainer = gluon.Trainer(self.collect_params(), "sgd",
+                                     {"learning_rate": lr, "momentum": 0, "wd": 0})
+        self._train(corpus_indices, num_steps, hyper_params, epochs, False)
+
+    def forward(self, inputs, state):
+        """ forward function """
+        h, state = self.rnn_layer(inputs, state)
+        outputs = self.dense(h.reshape((-1, h.shape[-1])))
+        return outputs, state
 
 
 if __name__ == '__main__':
