@@ -6,6 +6,7 @@ Date: 2019/8/16 8:45 PM
 """
 import sys
 import zipfile
+import numpy as np
 from mxnet import nd
 from mxnet.gluon import data as gdata
 import random
@@ -132,6 +133,13 @@ def data_iter_consecutive(corpus_indices, batch_size, num_steps, ctx=None):
 def to_onehot(inputs, voc_size):
     """ (batch_size, num_step) -> (num_step, (batch_size, voc_size)"""
     return [nd.one_hot(x, voc_size) for x in inputs.T]
+
+
+def load_airfoil_data():
+    """ load airfoil data """
+    data = np.genfromtxt("../data/airfoil_self_noise.dat")
+    data = (data - data.mean(axis=0)) / data.std(axis=0)
+    return nd.array(data[:, :-1]), nd.array(data[:, -1])
 
 
 if __name__ == '__main__':

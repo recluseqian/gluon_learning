@@ -48,11 +48,55 @@ def l2_penalty(w):
 
 
 # ############ optimization algorithm ##################
-def sgd(params, lr, batch_size):
+def sgd(params, hyper_params):
     """
     """
     for param in params:
-        param -= lr / batch_size * param.grad
+        param -= hyper_params['learning_rate'] * param.grad
+
+
+def sgd_momentum(params, states, hyper_params):
+    """ momentum sgd """
+    for p, v in zip(params, states):
+        v[:] = hyper_params["momentum"] * v + hyper_params["learning_rate"] * p.grad
+        p[:] -= v
+
+
+def adagrad(params, states, hyper_params):
+    """ ada grad optimizer """
+    eps = 1e-6
+    for p, s in zip(params, states):
+        s[:] += p.grad.square()
+        p[:] -= hyper_params["learning_rate"] * p.grad / (s + eps).sqrt()
+
+
+def rmsprop(params, states, hyper_params):
+    """ RMSProp optimizer """
+    gamma1, eps = hyper_params["gamma1"], 1e-6
+    for p, s in zip(params, states):
+        s[:] += gamma1 * s + (1 - gamma1) * p.grad.square()
+        p[:] -= hyper_params["learning_rate"] * p.grad / (s + eps).sqrt()
+
+
+def adadelta(params, states, hyper_params):
+    """ ada delta """
+    rho, eps = hyper_params["rho"], 1e-5
+    for p, (s, delta) in zip(params, states):
+        s[:] += rho * s + (1 - rho) * p.grad.square()
+        g = ((delta + eps).sqrt() / (s + eps).sqrt()) * p.grad
+        p[:] -= g
+        delta[:] = rho * delta + (1 - rho) * g.square()
+
+
+def adam(params, states, hyper_params):
+    """ adam """
+    beta1, beta2, eps = hyper_params.get("beta1", 0.9), hyper_params.get("beta2", 0.999), 1e-6
+    for p, (v, s) in zip(params, states):
+        v[:] = beta1 * v + (1 - beta1) * p.grad
+        s[:] = beta2 * s + (1 - beta2) * p.grad.square()
+        v_bias_corr = v / (1 - beta1 ** hyper_params["t"])
+        s_bias_corr = s / (1 - beta2 ** hyper_params["t"])
+        p[:] -= hyper_params["learning_rate"] * v_bias_corr / (s_bias_corr.sqrt() + eps)
 
 
 # ############ others #####################

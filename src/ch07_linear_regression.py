@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-File: ch03_linear_regression.py
-Date: 2019/8/6 11:05 AM
+File: ch07_linear_regression.py
+Date: 2019/8/25 5:38 PM
 """
-from mxnet import gluon, nd, init
+from mxnet import gluon, nd, init, autograd
 from mxnet.gluon import nn, loss as g_loss, data as g_data
 
 from common.base_model import BaseRegression
-from common import data_sets
 from common import log_utils
-from common.functions import square_loss
-
+from common.data_sets import iter_data, load_airfoil_data
+from common.functions import square_loss, sgd, sgd_momentum, adagrad, rmsprop, adadelta, adam
 
 logger = log_utils.get_logger(__name__)
 
@@ -39,7 +38,7 @@ class LinRegScratch(BaseRegression):
 
         history = []
         for epoch in range(epochs):
-            for x, y in data_sets.iter_data(train_x, train_y, batch_size):
+            for x, y in iter_data(train_x, train_y, batch_size):
                 self._train(x, y, optimizer, hyper_params)
             train_loss = self.evaluate(train_x, train_y)
             if test_x and test_y:
@@ -51,22 +50,52 @@ class LinRegScratch(BaseRegression):
             history.append((train_loss, test_loss))
         return history
 
+    def _train(self, x, y, optimizer, hyper_params):
+        with autograd.record():
+            y_hat = self.forward(x)
+            batch_loss = self._loss(y_hat, y).mean()
+        batch_loss.backward()
+        if self.trainers:
+            [trainer.step(1) for trainer in self.trainers]
+        else:
+            if optimizer == "sgd":
+                sgd(self.params, hyper_params)
+            elif optimizer == "momentum":
+                momentum_state = self.init_one_tuple_states()
+                sgd_momentum(self.params, momentum_state, hyper_params)
+            elif optimizer == "adagrad":
+                ada_grad_state = self.init_one_tuple_states()
+                adagrad(self.params, ada_grad_state, hyper_params)
+            elif optimizer == "rmsprop":
+                rmsprop_state = self.init_one_tuple_states()
+                rmsprop(self.params, rmsprop_state, hyper_params)
+            elif optimizer == "adadelta":
+                adadelta_states = self.init_two_tuple_states()
+                adadelta(self.params, adadelta_states, hyper_params)
+            elif optimizer == "adam":
+                adam_states = self.init_two_tuple_states()
+                adam(self.params, adam_states, hyper_params)
+            else:
+                raise ValueError("Do not support {} optimizer".format(optimizer))
+
     def forward(self, x):
         """
         """
         y_hat = nd.dot(x, self.w) + self.b
         return y_hat
 
-    def print_model(self):
-        """
-        """
-        logger.info("learned w: {}".format(self.w))
-        logger.info("learned b: {}".format(self.b))
+    def init_one_tuple_states(self):
+        return nd.zeros(self.w.shape), nd.zeros(self.b.shape)
+
+    def init_two_tuple_states(self):
+        return (nd.zeros(self.w.shape), nd.zeros(self.w.shape)), \
+               (nd.zeros(self.b.shape), nd.zeros(self.b.shape))
 
 
 class LinRegGluon(BaseRegression):
     """
     """
+
     def __init__(self):
         super(LinRegGluon, self).__init__()
         self.net = None
@@ -87,10 +116,12 @@ class LinRegGluon(BaseRegression):
         self.net.initialize(init.Normal(sigma=0.01))
 
         # training
-        if optimizer == "sgd":
+        if optimizer in ("sgd", "momentum"):
             self.trainers = [gluon.Trainer(self.net.collect_params(), 'sgd', hyper_params)]
+        elif optimizer in ("adagrad", "rmsprop", "adadelta", "adam"):
+            self.trainers = [gluon.Trainer(self.net.collect_params(), optimizer, hyper_params)]
         else:
-            raise ValueError("only support sgd optimizer")
+            raise ValueError("Do not support {} optimizer".format(optimizer))
         history = []
         for epoch in range(epochs):
             for x, y in data_iter:
@@ -111,30 +142,20 @@ class LinRegGluon(BaseRegression):
         """
         return self.net(x)
 
-    def print_model(self):
-        """
-        """
-        dense = self.net[0]
-        logger.info("learned w: {}".format(dense.weight.data()))
-        logger.info("learned b: {}".format(dense.bias.data()))
-
 
 if __name__ == '__main__':
-    from argparse import ArgumentParser
+    features, labels = load_airfoil_data()
+    features = features[:1500]
+    labels = labels[:1500]
 
-    parser = ArgumentParser()
-    parser.add_argument("--use_gluon", default="0")
-    args = parser.parse_args()
-    # load data
-    true_w = [2, -3.4, 4]
-    true_b = 4.2
-    _x, _y = data_sets.load_data_linear_regression(true_w, true_b)
-    # model
-    if args.use_gluon == "1":
+    use_gluon = False
+    if use_gluon:
         model = LinRegGluon()
     else:
         model = LinRegScratch()
-    # training
-    model.fit(_x, _y, "sgd", hyper_params={"learning_rate": 0.3}, epochs=30)
 
-    model.print_model()
+    _optimizer = "momentum"
+    _hyper_params = {"learning_rate": 0.03, "momentum": 0.5}
+
+    model.fit(features, labels, "sgd", _hyper_params, batch_size=100, epochs=10)
+    model.fit(features, labels, "momentum", _hyper_params, batch_size=100, epochs=10)

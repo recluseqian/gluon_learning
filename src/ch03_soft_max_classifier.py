@@ -22,19 +22,19 @@ class SoftMaxScratch(BaseClassifier):
 
         self.loss = cross_entropy
 
-    def fit(self, train_iter, lr=0.03, batch_size=256, epochs=10, test_iter=None):
+    def fit(self, train_iter, hyper_params, batch_size=256, epochs=10, test_iter=None):
         """
         """
         # model init params
         self.w = nd.random.normal(scale=0.01, shape=(self.num_inputs, self.num_outputs))
         self.b = nd.zeros(self.num_outputs)
-        self.params.append(self.w)
-        self.params.append(self.b)
+        self.params = [self.w, self.b]
+
         for param in self.params:
             param.attach_grad()
 
         # training
-        self._train(train_iter, lr, batch_size, epochs, test_iter=test_iter)
+        self._train(train_iter, hyper_params, batch_size, epochs, test_iter=test_iter)
 
     def forward(self, x):
         """
@@ -50,7 +50,7 @@ class SoftMaxGluon(BaseClassifier):
         self.net = None
         self.loss = g_loss.SoftmaxCrossEntropyLoss()
 
-    def fit(self, train_iter, lr=0.03, batch_size=256, epochs=10, test_iter=None):
+    def fit(self, train_iter, hyper_params, batch_size=256, epochs=10, test_iter=None):
         """
         """
         # model initialize
@@ -59,8 +59,8 @@ class SoftMaxGluon(BaseClassifier):
         self.net.initialize(init.Normal(sigma=0.01))
 
         # trainer
-        self.trainers.append(gluon.Trainer(self.net.collect_params(), "sgd", {"learning_rate": lr}))
-        self._train(train_iter, lr, batch_size, epochs, test_iter=test_iter)
+        self.trainers.append(gluon.Trainer(self.net.collect_params(), "sgd", hyper_params))
+        self._train(train_iter, hyper_params, batch_size, epochs, test_iter=test_iter)
 
     def forward(self, x):
         """
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument("--use_gluon", default="1")
+    parser.add_argument("--use_gluon", default="0")
     args = parser.parse_args()
 
     _train_iter, _test_iter = load_data_fashion_mnist(batch_size=256)
@@ -82,4 +82,4 @@ if __name__ == '__main__':
         model = SoftMaxGluon()
     else:
         model = SoftMaxScratch(num_inputs=784, num_outputs=10)
-    model.fit(_train_iter, test_iter=_test_iter)
+    model.fit(_train_iter, hyper_params={"learning_rate": 0.3}, test_iter=_test_iter)

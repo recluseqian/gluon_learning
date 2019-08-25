@@ -23,7 +23,7 @@ class PolynomialRegressionGluon(BaseRegression):
         self.loss = gloss.L2Loss()
         self.regularization = kwargs.get("regularization")
 
-    def fit(self, train_x, train_y, lr=0.01, batch_size=64, epochs=10,
+    def fit(self, train_x, train_y, optimizer, hyper_params, batch_size=64, epochs=10,
             test_x=None, test_y=None):
         """ fit x, y"""
         train_data_set = gdata.ArrayDataset(train_x, train_y)
@@ -33,22 +33,26 @@ class PolynomialRegressionGluon(BaseRegression):
         self.net.add(nn.Dense(1))
         self.net.initialize()
 
-        self.trainers = []
+        if optimizer != "sgd":
+            raise ValueError("only support sgd optimizer")
+
         if self.regularization == "l2":
-            self.trainers.extend([
-                gluon.Trainer(self.net.collect_params(".*weight"), "sgd",
-                              {"learning_rate": lr, "wd": 3}),
-                gluon.Trainer(self.net.collect_params(".*bias"), "sgd",
-                              {"learning_rate": lr})
-            ])
+            weight_decay_params = {k: v for k, v in hyper_params}
+            weight_decay_params["wd"] = 3
+            self.trainers = [
+                gluon.Trainer(self.net.collect_params(".*weight"), "sgd", weight_decay_params),
+                gluon.Trainer(self.net.collect_params(".*bias"), "sgd", hyper_params)
+
+            ]
         else:
-            self.trainers.append(gluon.Trainer(self.net.collect_params(), "sgd",
-                                               {"learning_rate": lr}))
+            self.trainers = [
+                gluon.Trainer(self.net.collect_params(), "sgd", hyper_params)
+            ]
 
         train_loss, test_loss = [], []
         for epoch in range(epochs):
             for x, y in train_iter:
-                self._train(x, y, lr, batch_size)
+                self._train(x, y, optimizer, hyper_params)
 
             train_loss.append(self.evaluate(train_x, train_y))
             test_loss.append(self.evaluate(test_x, test_y))
@@ -67,13 +71,4 @@ class PolynomialRegressionGluon(BaseRegression):
 
 
 if __name__ == '__main__':
-    num_train = 5000
-    num_test = 1000
-    data_x, data_y = data_sets.load_data_polynomial([1.2, -3.4, 5.6], 5,
-                                                    num_train, num_test)
-
-    _train_x, _train_y = data_x[:num_train], data_y[:num_train]
-    _test_x, _test_y = data_x[-num_test:], data_y[-num_test:]
-
-    model = PolynomialRegressionGluon()
-    model.fit(_train_x, _train_y, test_x=_test_x, test_y=_test_y)
+    pass
