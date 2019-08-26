@@ -6,6 +6,7 @@ Date: 2019/8/16 8:45 PM
 """
 import sys
 import zipfile
+import collections
 import numpy as np
 from mxnet import nd
 from mxnet.gluon import data as gdata
@@ -135,11 +136,28 @@ def to_onehot(inputs, voc_size):
     return [nd.one_hot(x, voc_size) for x in inputs.T]
 
 
-def load_airfoil_data():
+def load_airfoil_data(file_name="../data/airfoil_self_noise.dat"):
     """ load airfoil data """
-    data = np.genfromtxt("../data/airfoil_self_noise.dat")
+    data = np.genfromtxt(file_name)
     data = (data - data.mean(axis=0)) / data.std(axis=0)
     return nd.array(data[:, :-1]), nd.array(data[:, -1])
+
+
+def load_ptb_data(file_path):
+    """ load ptb data """
+    raw_data_set = []
+    with open(file_path + "ptb.train.txt") as f:
+        for line in f:
+            sp_line = line.rstrip("\n").split()
+            raw_data_set.append(sp_line)
+
+    logger.info("# sentences: %d" % len(raw_data_set))
+    for st in raw_data_set[:3]:
+        logger.info("# tokens: {}, {}".format(len(st), st[:5]))
+
+    counter = collections.Counter([tk for st in raw_data_set for tk in st])
+    counter = dict(filter(lambda x: x[1] > 5, counter.items()))
+    logger.info(counter)
 
 
 if __name__ == '__main__':
@@ -152,15 +170,14 @@ if __name__ == '__main__':
 
     # print("%.2f" % (time.time() - start))
     # load_jaychou_lyrics()
-    my_seq = list(range(30))
-    for X, Y in data_iter_random(my_seq, batch_size=2, num_steps=6):
-        logger.info("X: {}\nY: {}".format(X, Y))
-    my_seq = list(range(30))
-    for X, Y in data_iter_consecutive(my_seq, batch_size=2, num_steps=6):
-        logger.info("X: {}\nY: {}".format(X, Y))
+    # my_seq = list(range(30))
+    # for X, Y in data_iter_random(my_seq, batch_size=2, num_steps=6):
+    #     logger.info("X: {}\nY: {}".format(X, Y))
+    # my_seq = list(range(30))
+    # for X, Y in data_iter_consecutive(my_seq, batch_size=2, num_steps=6):
+    #     logger.info("X: {}\nY: {}".format(X, Y))
 
-    X = nd.arange(10).reshape((2, 5))
-    X = to_onehot(X, 1027)
-    logger.info("{}, {}".format(len(X), X[0].shape))
-
-
+    # X = nd.arange(10).reshape((2, 5))
+    # X = to_onehot(X, 1027)
+    # logger.info("{}, {}".format(len(X), X[0].shape))
+    load_ptb_data("../../data/ptb/")
