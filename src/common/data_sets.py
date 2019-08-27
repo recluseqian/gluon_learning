@@ -7,10 +7,11 @@ Date: 2019/8/16 8:45 PM
 import sys
 import zipfile
 import collections
+import math
+import random
 import numpy as np
 from mxnet import nd
 from mxnet.gluon import data as gdata
-import random
 
 from common import log_utils
 
@@ -156,8 +157,21 @@ def load_ptb_data(file_path):
         logger.info("# tokens: {}, {}".format(len(st), st[:5]))
 
     counter = collections.Counter([tk for st in raw_data_set for tk in st])
-    counter = dict(filter(lambda x: x[1] > 5, counter.items()))
-    logger.info(counter)
+    counter = dict(filter(lambda x: x[1] >= 5, counter.items()))
+
+    idx_to_token = [tk for tk, _ in counter.items()]
+    token_to_idx = {tk: idx for idx, tk in enumerate(idx_to_token)}
+
+    data_set = [[token_to_idx[tk] for tk in st if tk in token_to_idx]
+                for st in raw_data_set]
+    num_tokens = sum([len(st) for st in data_set])
+    logger.info("# tokens: {}".format(num_tokens))
+
+
+def discard(idx, counter, num_tokens):
+    return random.uniform(0, 1) < 1 - math.sqrt(
+        1e-4 / counter
+    )
 
 
 if __name__ == '__main__':
